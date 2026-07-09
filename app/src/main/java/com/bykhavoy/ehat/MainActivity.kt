@@ -12,12 +12,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.bykhavoy.ehat.data.Constants
 import com.bykhavoy.ehat.data.net.ConnectivityObserver
 import com.bykhavoy.ehat.ui.DayDetailScreen
 import com.bykhavoy.ehat.ui.DebugScreen
 import com.bykhavoy.ehat.ui.FiltersScreen
 import com.bykhavoy.ehat.ui.HomeScreen
 import com.bykhavoy.ehat.ui.MainViewModel
+import com.bykhavoy.ehat.ui.WaterScreen
 import com.bykhavoy.ehat.ui.theme.EhatTheme
 
 class MainActivity : ComponentActivity() {
@@ -44,7 +46,7 @@ class MainActivity : ComponentActivity() {
     override fun onStop() { super.onStop(); connectivity.stop() }
 }
 
-private enum class Screen { HOME, DETAIL, FILTERS, DEBUG }
+private enum class Screen { HOME, DETAIL, FILTERS, WATER, DEBUG }
 
 @Composable
 private fun AppRoot(vm: MainViewModel) {
@@ -64,6 +66,7 @@ private fun AppRoot(vm: MainViewModel) {
             onSelectTab = { vm.selectTab(it) },
             onOpenDay = { dayIndex = it; screen = Screen.DETAIL },
             onOpenFilters = { filtersFrom = Screen.HOME; screen = Screen.FILTERS },
+            onOpenWater = { screen = Screen.WATER },
             onRefresh = { vm.refresh() },
             onOpenDebug = { screen = Screen.DEBUG },
         )
@@ -93,6 +96,7 @@ private fun AppRoot(vm: MainViewModel) {
             onApply = { step, cols, s, e -> vm.applyFilters(step, cols, s, e) },
             onClose = { screen = filtersFrom },
         )
+        Screen.WATER -> WaterScreen(url = Constants.LADA_WATER_URL, onBack = { screen = Screen.HOME })
         Screen.DEBUG -> {
             val d by vm.diagnostics.collectAsStateWithLifecycle()
             DebugScreen(diagnostics = d, onRefresh = { vm.refresh() }, onBack = { screen = Screen.HOME })

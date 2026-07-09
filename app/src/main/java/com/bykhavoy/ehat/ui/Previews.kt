@@ -58,7 +58,7 @@ private fun sampleState(sea: Boolean) = UiState(
 @Preview(name = "Список дней", widthDp = W, heightDp = H, showBackground = true)
 @Composable
 private fun PreviewHome() = EhatTheme {
-    HomeScreen(sampleState(true), {}, {}, {}, {}, {})
+    HomeScreen(sampleState(true), {}, {}, {}, {}, {}, {})
 }
 
 @Preview(name = "Детали дня", widthDp = W, heightDp = H, showBackground = true)

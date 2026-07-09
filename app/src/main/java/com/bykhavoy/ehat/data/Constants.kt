@@ -18,4 +18,11 @@ object Constants {
 
     /** Foreground auto-refresh cadence (minutes). */
     const val AUTO_REFRESH_MINUTES: Long = 15L
+
+    /**
+     * Real sea-water temperature by sensors (Aktau/Каспий), opened in the
+     * browser on tap. Open-Meteo has no water temp for the Caspian, so we link
+     * out instead of scraping — robust, never breaks on layout changes.
+     */
+    const val LADA_WATER_URL: String = "https://www.lada.kz/temperatura_vody_v_more.html"
 }

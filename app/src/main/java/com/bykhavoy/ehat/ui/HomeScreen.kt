@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -46,6 +47,7 @@ fun HomeScreen(
     onSelectTab: (Int) -> Unit,
     onOpenDay: (Int) -> Unit,
     onOpenFilters: () -> Unit,
+    onOpenWater: () -> Unit,
     onRefresh: () -> Unit,
     onOpenDebug: () -> Unit,
 ) {
@@ -71,6 +73,18 @@ fun HomeScreen(
             Spacer(Modifier.weight(1f))
             state.freshness?.let { FreshnessStamp(it) }
             Spacer(Modifier.width(16.dp))
+            Text(
+                "💧 Вода",
+                color = androidx.compose.ui.graphics.Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                modifier = Modifier
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+                    .background(Calm)
+                    .clickable { onOpenWater() }
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+            )
+            Spacer(Modifier.width(12.dp))
             Text("Фильтры", color = Calm, fontWeight = FontWeight.SemiBold, fontSize = 16.sp,
                 modifier = Modifier.clickable { onOpenFilters() }.padding(6.dp))
             Spacer(Modifier.width(10.dp))
