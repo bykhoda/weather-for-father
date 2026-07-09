@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Splash background = Bg token (spec §12.2). Not pure black. -->
+    <color name="bg">#FF0B1015</color>
+    <color name="calm">#FF2DD4BF</color>
+</resources>

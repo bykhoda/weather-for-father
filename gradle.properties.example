@@ -1,0 +1,15 @@
+# --- Private dacha coordinates -------------------------------------------------
+# The build reads DACHA_LAT / DACHA_LON / ROUTE_BEARING from local.properties
+# (git-ignored). To point the "Дача" card at your real house:
+#
+#   cp gradle.properties.example local.properties   # or append to existing
+#   # then edit the three values below
+#
+# ROUTE_BEARING is the azimuth of travel Aktau -> dacha in degrees (0 = due
+# north, 90 = east). Compute it once; it is a constant, not a live route.
+#
+# Without these, both cards show Aktau. The app still builds and runs.
+
+DACHA_LAT=43.6481
+DACHA_LON=51.1722
+ROUTE_BEARING=0.0

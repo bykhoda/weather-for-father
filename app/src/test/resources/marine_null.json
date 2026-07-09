@@ -1,0 +1,22 @@
+[
+  {
+    "latitude": 43.6481,
+    "longitude": 51.1722,
+    "timezone": "Asia/Aqtau",
+    "hourly": {
+      "time": ["2025-07-01T12:00", "2025-07-01T13:00", "2025-07-01T14:00", "2025-07-01T15:00"],
+      "wave_height": [null, null, null, null],
+      "sea_surface_temperature": [null, null, null, null]
+    }
+  },
+  {
+    "latitude": 44.12,
+    "longitude": 51.3,
+    "timezone": "Asia/Aqtau",
+    "hourly": {
+      "time": ["2025-07-01T12:00", "2025-07-01T13:00", "2025-07-01T14:00", "2025-07-01T15:00"],
+      "wave_height": [null, null, null, null],
+      "sea_surface_temperature": [null, null, null, null]
+    }
+  }
+]
