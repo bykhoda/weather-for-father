@@ -1,24 +1,38 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path
-        android:strokeColor="#2DD4BF"
-        android:strokeWidth="5"
-        android:strokeLineCap="round"
-        android:fillColor="#00000000"
-        android:pathData="M28,44 h34 a9,9 0 1 0 -9,-9" />
-    <path
-        android:strokeColor="#2DD4BF"
-        android:strokeWidth="5"
-        android:strokeLineCap="round"
-        android:fillColor="#00000000"
-        android:pathData="M24,60 h46 a9,9 0 1 1 -9,9" />
-    <path
-        android:strokeColor="#2DD4BF"
-        android:strokeWidth="5"
-        android:strokeLineCap="round"
-        android:fillColor="#00000000"
-        android:pathData="M28,76 h26 a8,8 0 1 1 -8,8" />
+
+    <!-- Sun rays -->
+    <group>
+        <path android:strokeColor="#F5A623" android:strokeWidth="5.5" android:strokeLineCap="round"
+            android:pathData="M54,26 L54,17" />
+        <path android:strokeColor="#F5A623" android:strokeWidth="5.5" android:strokeLineCap="round"
+            android:pathData="M54,82 L54,91" />
+        <path android:strokeColor="#F5A623" android:strokeWidth="5.5" android:strokeLineCap="round"
+            android:pathData="M82,54 L91,54" />
+        <path android:strokeColor="#F5A623" android:strokeWidth="5.5" android:strokeLineCap="round"
+            android:pathData="M26,54 L17,54" />
+        <path android:strokeColor="#F5A623" android:strokeWidth="5.5" android:strokeLineCap="round"
+            android:pathData="M73.8,34.2 L80.2,27.8" />
+        <path android:strokeColor="#F5A623" android:strokeWidth="5.5" android:strokeLineCap="round"
+            android:pathData="M34.2,34.2 L27.8,27.8" />
+        <path android:strokeColor="#F5A623" android:strokeWidth="5.5" android:strokeLineCap="round"
+            android:pathData="M73.8,73.8 L80.2,80.2" />
+        <path android:strokeColor="#F5A623" android:strokeWidth="5.5" android:strokeLineCap="round"
+            android:pathData="M34.2,73.8 L27.8,80.2" />
+    </group>
+
+    <!-- Sun disc with warm gradient -->
+    <path android:pathData="M36,54 a18,18 0 1,0 36,0 a18,18 0 1,0 -36,0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear"
+                android:startX="54" android:startY="36" android:endX="54" android:endY="72">
+                <item android:offset="0" android:color="#FFD877" />
+                <item android:offset="1" android:color="#F5A623" />
+            </gradient>
+        </aapt:attr>
+    </path>
 </vector>

@@ -45,13 +45,14 @@ class OpenMeteoClient(
         .addQueryParameter("longitude", lon)
         .addQueryParameter(
             "hourly",
-            "wind_speed_10m,wind_gusts_10m,wind_direction_10m,apparent_temperature," +
+            "temperature_2m,relative_humidity_2m,apparent_temperature," +
+                "wind_speed_10m,wind_gusts_10m,wind_direction_10m," +
                 "uv_index,precipitation_probability,weather_code,is_day",
         )
         .addQueryParameter("current", "wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m")
         .addQueryParameter("wind_speed_unit", "ms")
         .addQueryParameter("timezone", "Asia/Aqtau")
-        .addQueryParameter("forecast_days", "3")
+        .addQueryParameter("forecast_days", "14")
         .build().toString()
 
     private fun airUrl() = "https://air-quality-api.open-meteo.com/v1/air-quality".toHttpUrl().newBuilder()
@@ -59,7 +60,7 @@ class OpenMeteoClient(
         .addQueryParameter("longitude", lon)
         .addQueryParameter("hourly", "pm10,dust")
         .addQueryParameter("timezone", "Asia/Aqtau")
-        .addQueryParameter("forecast_days", "3")
+        .addQueryParameter("forecast_days", "7")
         .build().toString()
 
     private fun marineUrl() = "https://marine-api.open-meteo.com/v1/marine".toHttpUrl().newBuilder()
@@ -67,7 +68,7 @@ class OpenMeteoClient(
         .addQueryParameter("longitude", lon)
         .addQueryParameter("hourly", "wave_height,sea_surface_temperature")
         .addQueryParameter("timezone", "Asia/Aqtau")
-        .addQueryParameter("forecast_days", "3")
+        .addQueryParameter("forecast_days", "14")
         .build().toString()
 
     override suspend fun fetch(): ApiResult = withContext(Dispatchers.IO) {

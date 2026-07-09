@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Splash background = Bg token (spec §12.2). Not pure black. -->
-    <color name="bg">#FF0B1015</color>
-    <color name="calm">#FF2DD4BF</color>
+    <!-- Light splash background matching the app Bg token. -->
+    <color name="bg">#FFF4F5F7</color>
+    <color name="calm">#FF12B3A6</color>
 </resources>

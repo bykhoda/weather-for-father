@@ -3,68 +3,74 @@ package com.bykhavoy.ehat.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.bykhavoy.ehat.domain.WindStatus
-import com.bykhavoy.ehat.domain.model.Factor
-import com.bykhavoy.ehat.domain.model.FactorId
 import com.bykhavoy.ehat.ui.theme.EhatTheme
 
-/** Landscape preview device profile matching the head unit (spec §2). */
-private const val W = 960
-private const val H = 540
+private const val W = 1280
+private const val H = 720
 
-private fun sampleFactors(binding: FactorId, bindingStatus: WindStatus): List<Factor> = listOf(
-    Factor(FactorId.PRECIP, 5.0, "%", true, WindStatus.CALM, "осадки 5%", "без осадков"),
-    Factor(FactorId.DUST, 30.0, "мкг/м³", true, WindStatus.CALM, "PM10 30", "воздух чистый"),
-    Factor(FactorId.WIND, 15.0, "м/с", true, if (binding == FactorId.WIND) bindingStatus else WindStatus.WINDY, "порывы 15 м/с", "порывы до 15, на пляже неуютно"),
-    Factor(FactorId.HEAT, 34.0, "°", true, WindStatus.CALM, "ощущается 34°", "34°, комфортно"),
-    Factor(FactorId.UV, 9.0, "", true, if (binding == FactorId.UV) bindingStatus else WindStatus.WINDY, "УФ 9", "УФ 9 — обгоришь за полчаса"),
-).map { if (it.id == binding) it.copy(status = bindingStatus) else it }
+private val defaultEnabled = setOf(
+    Col.SKY, Col.TEMP, Col.WIND, Col.GUST, Col.DIR, Col.PRECIP, Col.HUMIDITY, Col.SEA_TEMP, Col.WAVE,
+)
 
-private fun sampleState(status: WindStatus, binding: FactorId): UiState {
-    val headline = when (status) {
-        WindStatus.CALM -> "ДА"
-        WindStatus.WINDY -> "ДА, НО"
-        WindStatus.HARSH -> "НЕ СЕГОДНЯ"
-    }
-    val reason = when (status) {
-        WindStatus.CALM -> "Всё спокойно, можно ехать"
-        WindStatus.WINDY -> "Порывы до 11, на пляже неуютно"
-        WindStatus.HARSH -> "УФ 9 — обгоришь за полчаса · сложится завтра после обеда"
-    }
-    return UiState(
-        phase = UiState.Phase.CONTENT,
-        sceneStatus = status,
-        aktau = CardModel("Актау", null, 6, 9, 315f, WindStatus.CALM, null),
-        dacha = CardModel("Дача", "к приезду, ~14:00", 11, 15, 320f, WindStatus.WINDY, "встречный · ориент. −7% хода"),
-        factors = sampleFactors(binding, status),
-        bindingId = binding,
-        histogram = List(72) { i ->
-            HistogramBar(
-                gustMs = (6 + (i % 12)).toFloat(),
-                status = if (i % 12 > 8) WindStatus.HARSH else if (i % 12 > 5) WindStatus.WINDY else WindStatus.CALM,
-                present = i != 30, // one gap to show null handling
-            )
+private fun sampleRows(sea: Boolean): List<HourRow> = (0..7).map { i ->
+    val h = i * 3
+    val gust = 6 + (i % 5) * 3
+    HourRow(
+        time = "%02d:00".format(h),
+        sky = listOf("☀", "⛅", "☁", "🌧", "⛈")[i % 5],
+        tempC = 22 + (i % 6),
+        feelsC = 24 + (i % 6),
+        humidityPct = 40 + i * 3,
+        windMs = 4 + (i % 4),
+        gustMs = gust,
+        windStatus = when {
+            gust >= 14 -> WindStatus.HARSH
+            gust >= 8 -> WindStatus.WINDY
+            else -> WindStatus.CALM
         },
-        cta = CtaModel(headline, reason, status),
-        freshness = Freshness("обновлено 4 минуты назад", FreshLevel.FRESH),
+        windFromDeg = (i * 40f) % 360f,
+        compass = listOf("С", "СВ", "В", "ЮВ", "Ю", "ЮЗ", "З", "СЗ")[i % 8],
+        precipPct = (i * 12) % 100,
+        seaTempC = if (sea) 24 + (i % 3) else null,
+        waveM = if (sea) (0.2 + i * 0.1) else null,
+        isNow = i == 2,
     )
 }
 
-private val noop: () -> Unit = {}
+private fun sampleDays(sea: Boolean) = listOf(
+    DaySection("Четверг, 10 июля", sampleRows(sea)),
+    DaySection("Пятница, 11 июля", sampleRows(sea)),
+    DaySection("Суббота, 12 июля", sampleRows(sea)),
+)
 
-@Preview(name = "CALM", widthDp = W, heightDp = H, showBackground = true)
+private fun sampleState(sea: Boolean) = UiState(
+    phase = UiState.Phase.CONTENT,
+    tabs = listOf("Грин Парк", "Ивушка"),
+    selectedTab = if (sea) 1 else 0,
+    stepHours = 3,
+    enabled = defaultEnabled,
+    days = sampleDays(sea),
+    hasSeaTemp = sea,
+    hasWave = sea,
+    freshness = Freshness("обновлено 4 минуты назад", FreshLevel.FRESH),
+)
+
+@Preview(name = "Список дней", widthDp = W, heightDp = H, showBackground = true)
 @Composable
-private fun PreviewCalm() = EhatTheme {
-    MainScreen(sampleState(WindStatus.CALM, FactorId.WIND), noop, noop, noop, noop)
+private fun PreviewHome() = EhatTheme {
+    HomeScreen(sampleState(true), {}, {}, {}, {}, {})
 }
 
-@Preview(name = "WINDY", widthDp = W, heightDp = H, showBackground = true)
+@Preview(name = "Детали дня", widthDp = W, heightDp = H, showBackground = true)
 @Composable
-private fun PreviewWindy() = EhatTheme {
-    MainScreen(sampleState(WindStatus.WINDY, FactorId.WIND), noop, noop, noop, noop)
-}
-
-@Preview(name = "HARSH (UV binding, calm wind)", widthDp = W, heightDp = H, showBackground = true)
-@Composable
-private fun PreviewHarsh() = EhatTheme {
-    MainScreen(sampleState(WindStatus.HARSH, FactorId.UV), noop, noop, noop, noop)
+private fun PreviewDetail() = EhatTheme {
+    DayDetailScreen(
+        day = sampleDays(true).first(),
+        locationName = "Ивушка",
+        hasSeaTemp = true,
+        hasWave = true,
+        enabled = defaultEnabled,
+        onOpenFilters = {},
+        onBack = {},
+    )
 }

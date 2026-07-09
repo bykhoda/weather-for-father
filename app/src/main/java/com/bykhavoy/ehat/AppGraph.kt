@@ -30,8 +30,8 @@ class AppGraph(context: Context) {
     val settings = SettingsStore(appContext.appDataStore)
 
     val api = OpenMeteoClient(
-        aktau = Constants.AKTAU,
-        dacha = Constants.DACHA,
+        aktau = Constants.HOME,
+        dacha = Constants.SEA,
         clock = clock,
         onDiagnostics = { transform -> diagnostics.update { it.transform() } },
     )

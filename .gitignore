@@ -1,5 +1,6 @@
 *.iml
 .gradle/
+.kotlin/
 # local.properties holds the SDK path AND the private dacha coordinates.
 /local.properties
 /.idea/

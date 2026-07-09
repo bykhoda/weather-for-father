@@ -1,24 +1,20 @@
 package com.bykhavoy.ehat.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
-/** Dark only (spec §6, §12.1). No light theme, no theme toggle. */
-private val EhatColors = darkColorScheme(
+/** Light theme to suit the white cabin (spec direction changed from dark). */
+private val EhatColors = lightColorScheme(
     primary = Calm,
     background = Bg,
-    surface = Bg,
-    onPrimary = Bg,
+    surface = Card,
+    onPrimary = Card,
     onBackground = Ink,
     onSurface = Ink,
 )
 
 @Composable
-fun EhatTheme(
-    @Suppress("UNUSED_PARAMETER") darkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable () -> Unit,
-) {
+fun EhatTheme(content: @Composable () -> Unit) {
     MaterialTheme(colorScheme = EhatColors, content = content)
 }

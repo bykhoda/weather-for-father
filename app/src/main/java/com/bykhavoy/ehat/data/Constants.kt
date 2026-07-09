@@ -4,22 +4,18 @@ import com.bykhavoy.ehat.BuildConfig
 import com.bykhavoy.ehat.domain.model.Location
 
 /**
- * The only hardcoded coordinates in the app (spec §4). Aktau is public; the
- * dacha comes from BuildConfig (fed by local.properties, defaulting to Aktau).
- * Kept in ONE place on purpose — do not scatter coordinates through the code.
+ * Fixed locations shown in the app. Two family points, both near the Caspian:
+ *  - HOME  = ЖК «Грин Парк» in Aktau (~800 m from the sea)
+ *  - SEA   = «Ивушка» resort at Тёплый пляж (~25 km south), where sea-water
+ *            temperature and waves are most relevant.
+ * SEA coordinates come from local.properties (BuildConfig); HOME is a constant.
  */
 object Constants {
-    val AKTAU = Location("Актау", 43.6481, 51.1722)
+    val HOME = Location("Грин Парк", 43.6300, 51.1580)
+    val SEA = Location("Ивушка", BuildConfig.DACHA_LAT, BuildConfig.DACHA_LON)
 
-    // ⚠️ Fill DACHA_LAT/DACHA_LON in local.properties for the real house.
-    val DACHA = Location("Дача", BuildConfig.DACHA_LAT, BuildConfig.DACHA_LON)
+    val LOCATIONS = listOf(HOME, SEA)
 
-    /** Azimuth Aktau -> dacha, degrees. Constant, computed once (spec §5.3). */
-    val ROUTE_BEARING: Double = BuildConfig.ROUTE_BEARING
-
-    /** Assumed cruising speed for the range-penalty heuristic (~100 km/h). */
-    const val CAR_SPEED_MS: Double = 27.0
-
-    /** Foreground auto-refresh cadence (spec §7). */
+    /** Foreground auto-refresh cadence (minutes). */
     const val AUTO_REFRESH_MINUTES: Long = 15L
 }

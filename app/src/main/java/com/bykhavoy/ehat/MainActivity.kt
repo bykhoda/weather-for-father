@@ -13,13 +13,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.bykhavoy.ehat.data.net.ConnectivityObserver
+import com.bykhavoy.ehat.ui.DayDetailScreen
 import com.bykhavoy.ehat.ui.DebugScreen
-import com.bykhavoy.ehat.ui.MainScreen
+import com.bykhavoy.ehat.ui.FiltersScreen
+import com.bykhavoy.ehat.ui.HomeScreen
 import com.bykhavoy.ehat.ui.MainViewModel
-import com.bykhavoy.ehat.ui.SettingsScreen
 import com.bykhavoy.ehat.ui.theme.EhatTheme
 
-/** The Activity. Landscape + splash are configured in the manifest / theme. */
 class MainActivity : ComponentActivity() {
 
     private lateinit var connectivity: ConnectivityObserver
@@ -34,50 +34,68 @@ class MainActivity : ComponentActivity() {
             MainViewModel.Factory(graph.repository, graph.settings, graph.clock, graph.diagnostics),
         )[MainViewModel::class.java]
 
-        // Splash lives exactly as long as it takes to read the cache (~30 ms).
-        // NEVER a fixed delay (spec §13.11).
         splash.setKeepOnScreenCondition { !vm.cacheLoaded.value }
-
         connectivity = ConnectivityObserver(this) { vm.refresh() }
 
         setContent { EhatTheme { AppRoot(vm) } }
     }
 
-    override fun onStart() {
-        super.onStart()
-        connectivity.start()
-    }
-
-    override fun onStop() {
-        super.onStop()
-        connectivity.stop()
-    }
+    override fun onStart() { super.onStart(); connectivity.start() }
+    override fun onStop() { super.onStop(); connectivity.stop() }
 }
 
-private enum class Screen { MAIN, SETTINGS, DEBUG }
+private enum class Screen { HOME, DETAIL, FILTERS, DEBUG }
 
 @Composable
 private fun AppRoot(vm: MainViewModel) {
-    var screen by remember { mutableStateOf(Screen.MAIN) }
+    var screen by remember { mutableStateOf(Screen.HOME) }
+    var dayIndex by remember { mutableStateOf(0) }
+    // Where Filters was opened from, so applying/closing returns there.
+    var filtersFrom by remember { mutableStateOf(Screen.HOME) }
     val ui by vm.uiState.collectAsStateWithLifecycle()
 
-    BackHandler(enabled = screen != Screen.MAIN) { screen = Screen.MAIN }
+    BackHandler(enabled = screen != Screen.HOME) {
+        screen = if (screen == Screen.FILTERS) filtersFrom else Screen.HOME
+    }
 
     when (screen) {
-        Screen.MAIN -> MainScreen(
+        Screen.HOME -> HomeScreen(
             state = ui,
-            onOpenSettings = { screen = Screen.SETTINGS },
+            onSelectTab = { vm.selectTab(it) },
+            onOpenDay = { dayIndex = it; screen = Screen.DETAIL },
+            onOpenFilters = { filtersFrom = Screen.HOME; screen = Screen.FILTERS },
+            onRefresh = { vm.refresh() },
             onOpenDebug = { screen = Screen.DEBUG },
-            onRetry = { vm.refresh() },
-            onCta = { vm.refresh() },
         )
-        Screen.SETTINGS -> {
-            val t by vm.thresholds.collectAsStateWithLifecycle()
-            SettingsScreen(thresholds = t, onChange = { vm.updateThresholds(it) }, onBack = { screen = Screen.MAIN })
+        Screen.DETAIL -> {
+            val day = ui.days.getOrNull(dayIndex)
+            if (day == null) {
+                screen = Screen.HOME
+            } else {
+                DayDetailScreen(
+                    day = day,
+                    locationName = ui.tabs.getOrElse(ui.selectedTab) { "" },
+                    hasSeaTemp = ui.hasSeaTemp,
+                    hasWave = ui.hasWave,
+                    enabled = ui.enabled,
+                    onOpenFilters = { filtersFrom = Screen.DETAIL; screen = Screen.FILTERS },
+                    onBack = { screen = Screen.HOME },
+                )
+            }
         }
+        Screen.FILTERS -> FiltersScreen(
+            initialStep = ui.stepHours,
+            initialEnabled = ui.enabled,
+            initialStartMs = ui.rangeStartMs,
+            initialEndMs = ui.rangeEndMs,
+            hasSeaTemp = ui.hasSeaTemp,
+            hasWave = ui.hasWave,
+            onApply = { step, cols, s, e -> vm.applyFilters(step, cols, s, e) },
+            onClose = { screen = filtersFrom },
+        )
         Screen.DEBUG -> {
             val d by vm.diagnostics.collectAsStateWithLifecycle()
-            DebugScreen(diagnostics = d, onRefresh = { vm.refresh() }, onBack = { screen = Screen.MAIN })
+            DebugScreen(diagnostics = d, onRefresh = { vm.refresh() }, onBack = { screen = Screen.HOME })
         }
     }
 }

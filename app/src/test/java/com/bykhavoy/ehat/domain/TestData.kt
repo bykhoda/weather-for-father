@@ -24,6 +24,8 @@ object TestData {
         pm10: Double? = 20.0,
         wave: Double? = 0.2,
         seaTemp: Double? = 24.0,
+        humidity: Double? = 45.0,
+        temp: Double? = 24.0,
     ): HourlyPoint = HourlyPoint(
         time = time,
         isDay = isDay,
@@ -37,5 +39,7 @@ object TestData {
         pm10 = pm10,
         waveHeightM = wave,
         seaTempC = seaTemp,
+        humidityPct = humidity,
+        temperatureC = temp,
     )
 }

@@ -30,7 +30,7 @@ class ForecastRepositoryTest {
         val t0 = Instant.parse("2025-07-01T07:00:00Z")
         val cur = CurrentPoint(t0, 5.0, 7.0, 315.0, 30.0)
         val hourly = (0..2).map {
-            HourlyPoint(t0.plusSeconds(3600L * it), true, 5.0, 7.0, 315.0, 30.0, 3.0, 0.0, 0, 20.0, null, null)
+            HourlyPoint(t0.plusSeconds(3600L * it), true, 5.0, 7.0, 315.0, 30.0, 3.0, 0.0, 0, 20.0, null, null, 45.0, 28.0)
         }
         val lf = LocationForecast(loc, cur, hourly)
         return Forecast(lf, lf)

@@ -55,9 +55,11 @@ object ForecastMapper {
                 uvIndex = fh.uvIndex.getOrNull(i),
                 precipProbPct = fh.precipProb.getOrNull(i),
                 weatherCode = fh.weatherCode.getOrNull(i),
-                pm10 = ai?.let { airH.pm10.getOrNull(it) ?: airH.dust.getOrNull(it) },
-                waveHeightM = mi?.let { marineH!!.waveHeight.getOrNull(it) },
-                seaTempC = mi?.let { marineH!!.seaTemp.getOrNull(it) },
+                pm10 = ai?.let { idx -> airH?.pm10?.getOrNull(idx) ?: airH?.dust?.getOrNull(idx) },
+                waveHeightM = mi?.let { idx -> marineH?.waveHeight?.getOrNull(idx) },
+                seaTempC = mi?.let { idx -> marineH?.seaTemp?.getOrNull(idx) },
+                humidityPct = fh.humidity.getOrNull(i),
+                temperatureC = fh.temperature.getOrNull(i),
             )
         }
 

@@ -23,6 +23,8 @@ data class HourlyPoint(
     val pm10: Double?,
     val waveHeightM: Double?,
     val seaTempC: Double?,
+    val humidityPct: Double?,
+    val temperatureC: Double?,
 )
 
 /** Snapshot of "right now" for a location (Open-Meteo `current` block). */

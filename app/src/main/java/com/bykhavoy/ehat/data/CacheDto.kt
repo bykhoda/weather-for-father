@@ -85,6 +85,8 @@ data class CachedHour(
     val pm10: Double?,
     val wave: Double?,
     val seaTemp: Double?,
+    val humidity: Double?,
+    val temp: Double?,
 ) {
     fun toDomain() = HourlyPoint(
         time = Instant.ofEpochMilli(timeMs),
@@ -99,6 +101,8 @@ data class CachedHour(
         pm10 = pm10,
         waveHeightM = wave,
         seaTempC = seaTemp,
+        humidityPct = humidity,
+        temperatureC = temp,
     )
 
     companion object {
@@ -115,6 +119,8 @@ data class CachedHour(
             pm10 = h.pm10,
             wave = h.waveHeightM,
             seaTemp = h.seaTempC,
+            humidity = h.humidityPct,
+            temp = h.temperatureC,
         )
     }
 }

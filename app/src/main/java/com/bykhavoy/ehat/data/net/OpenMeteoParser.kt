@@ -3,6 +3,7 @@ package com.bykhavoy.ehat.data.net
 import com.bykhavoy.ehat.data.dto.AirQualityResponse
 import com.bykhavoy.ehat.data.dto.ForecastResponse
 import com.bykhavoy.ehat.data.dto.MarineResponse
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 
