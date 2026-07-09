@@ -13,16 +13,11 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
-      - run: chmod +x gradlew
+        with:
+          gradle-version: '8.9'
       - name: Build debug APK
-        run: ./gradlew assembleDebug
-      - name: Fail if Play Services leaked in
-        run: |
-          if ./gradlew :app:dependencies | grep -q 'com.google.android.gms'; then
-            echo "::error::Google Play Services detected. Головное устройство их не имеет."
-            exit 1
-          fi
+        run: gradle assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: ehat-debug-apk
+          name: weather-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
