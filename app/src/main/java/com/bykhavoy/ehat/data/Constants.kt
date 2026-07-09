@@ -25,4 +25,7 @@ object Constants {
      * out instead of scraping — robust, never breaks on layout changes.
      */
     const val LADA_WATER_URL: String = "https://www.lada.kz/temperatura_vody_v_more.html"
+
+    /** OpenWeatherMap key for raster map tiles (from local.properties, may be empty). */
+    val OWM_KEY: String = BuildConfig.OWM_KEY
 }

@@ -44,33 +44,41 @@ class MainViewModel(
 
     // Default to Ивушка (the sea point).
     private val selectedTab = MutableStateFlow(1)
+    private val refreshing = MutableStateFlow(false)
 
     val uiState: StateFlow<UiState> =
         combine(
-            repository.state,
-            settings.stepHours,
-            settings.enabledColumns,
-            settings.range,
-            selectedTab,
-        ) { state, step, colNames, range, tab ->
-            build(state, step, colNames, range, tab)
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UiState())
+            combine(
+                repository.state,
+                settings.stepHours,
+                settings.enabledColumns,
+                settings.range,
+                selectedTab,
+            ) { state, step, colNames, range, tab -> build(state, step, colNames, range, tab) },
+            refreshing,
+        ) { s, r -> s.copy(refreshing = r) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UiState())
 
     init {
         viewModelScope.launch {
             repository.loadCache()
             _cacheLoaded.value = true
-            repository.refresh()
+            doRefresh()
         }
         viewModelScope.launch {
             while (true) {
                 delay(Constants.AUTO_REFRESH_MINUTES * 60_000)
-                repository.refresh()
+                doRefresh()
             }
         }
     }
 
-    fun refresh() = viewModelScope.launch { repository.refresh() }
+    private suspend fun doRefresh() {
+        refreshing.value = true
+        try { repository.refresh() } finally { refreshing.value = false }
+    }
+
+    fun refresh() = viewModelScope.launch { doRefresh() }
     fun selectTab(index: Int) { selectedTab.value = index }
 
     /** Commit the Filters draft (step, columns, date range). null range = full horizon. */

@@ -33,6 +33,7 @@ data class UiState(
     val days: List<DaySection> = emptyList(),
     val hasSeaTemp: Boolean = false,
     val hasWave: Boolean = false,
+    val refreshing: Boolean = false,
     val freshness: Freshness? = null,
     val emptyLabel: String? = null,
 ) {

@@ -33,6 +33,7 @@ android {
         buildConfigField("double", "DACHA_LAT", cfg("DACHA_LAT", "43.6481"))
         buildConfigField("double", "DACHA_LON", cfg("DACHA_LON", "51.1722"))
         buildConfigField("double", "ROUTE_BEARING", cfg("ROUTE_BEARING", "0.0"))
+        buildConfigField("String", "OWM_KEY", "\"${cfg("OWM_KEY", "")}\"")
     }
 
     buildTypes {

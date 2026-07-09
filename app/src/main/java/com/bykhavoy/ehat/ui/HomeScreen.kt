@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -46,8 +48,6 @@ fun HomeScreen(
     state: UiState,
     onSelectTab: (Int) -> Unit,
     onOpenDay: (Int) -> Unit,
-    onOpenFilters: () -> Unit,
-    onOpenWater: () -> Unit,
     onRefresh: () -> Unit,
     onOpenDebug: () -> Unit,
 ) {
@@ -72,28 +72,20 @@ fun HomeScreen(
             if (state.tabs.isNotEmpty()) Segmented(state.tabs, state.selectedTab, onSelectTab)
             Spacer(Modifier.weight(1f))
             state.freshness?.let { FreshnessStamp(it) }
-            Spacer(Modifier.width(16.dp))
-            Text(
-                "💧 Вода",
-                color = androidx.compose.ui.graphics.Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
-                modifier = Modifier
-                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
-                    .background(Calm)
-                    .clickable { onOpenWater() }
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-            )
-            Spacer(Modifier.width(12.dp))
-            Text("Фильтры", color = Calm, fontWeight = FontWeight.SemiBold, fontSize = 16.sp,
-                modifier = Modifier.clickable { onOpenFilters() }.padding(6.dp))
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(14.dp))
             Text("⟳", color = Calm, fontSize = 22.sp, modifier = Modifier.clickable { onRefresh() }.padding(4.dp))
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(Hairline))
+        if (state.refreshing && state.phase == UiState.Phase.CONTENT) {
+            LinearProgressIndicator(
+                Modifier.fillMaxWidth().height(2.dp),
+                color = Calm,
+                trackColor = androidx.compose.ui.graphics.Color.Transparent,
+            )
+        }
 
         when (state.phase) {
-            UiState.Phase.LOADING -> LoadingList()
+            UiState.Phase.LOADING -> Loader()
             UiState.Phase.EMPTY -> EmptyState(state.emptyLabel, onRefresh)
             UiState.Phase.CONTENT -> LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
                 itemsIndexed(state.days) { i, day ->
@@ -148,11 +140,15 @@ private fun DayCard(day: DaySection, showSea: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun LoadingList() {
-    Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        repeat(7) {
-            Box(Modifier.fillMaxWidth().height(56.dp).background(androidx.compose.ui.graphics.Color(0x0A000000)))
-        }
+private fun Loader() {
+    Column(
+        Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        CircularProgressIndicator(color = Calm)
+        Spacer(Modifier.height(14.dp))
+        Text("Загрузка прогноза…", color = InkDim, fontSize = 15.sp)
     }
 }
 

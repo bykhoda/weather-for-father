@@ -1,8 +1,5 @@
 package com.bykhavoy.ehat.ui
 
-import android.annotation.SuppressLint
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -21,18 +18,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
+import com.bykhavoy.ehat.ui.components.WebPane
 import com.bykhavoy.ehat.ui.theme.Bg
 import com.bykhavoy.ehat.ui.theme.Calm
 import com.bykhavoy.ehat.ui.theme.Ink
 import com.bykhavoy.ehat.ui.theme.InkDim
 import com.bykhavoy.ehat.ui.theme.Stroke
 
-/**
- * Real sea-water temperature by sensors, shown IN-APP via a WebView (Constants.
- * LADA_WATER_URL). WebView is a core Android component present even on the
- * head unit, so this does not depend on an external browser being installed.
- */
 @Composable
 fun WaterScreen(url: String, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Bg)) {
@@ -48,19 +40,6 @@ fun WaterScreen(url: String, onBack: () -> Unit) {
             }
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(Stroke))
-        AndroidView(
-            modifier = Modifier.fillMaxSize(),
-            factory = { ctx ->
-                @SuppressLint("SetJavaScriptEnabled")
-                WebView(ctx).apply {
-                    settings.javaScriptEnabled = true
-                    settings.domStorageEnabled = true
-                    settings.loadWithOverviewMode = true
-                    settings.useWideViewPort = true
-                    webViewClient = WebViewClient()
-                    loadUrl(url)
-                }
-            },
-        )
+        WebPane(url, Modifier.fillMaxSize())
     }
 }
