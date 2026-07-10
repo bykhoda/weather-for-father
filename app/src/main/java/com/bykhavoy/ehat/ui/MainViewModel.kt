@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.bykhavoy.ehat.data.Constants
 import com.bykhavoy.ehat.data.ForecastRepository
 import com.bykhavoy.ehat.data.ForecastState
+import com.bykhavoy.ehat.data.PlacesStore
 import com.bykhavoy.ehat.data.SettingsStore
 import com.bykhavoy.ehat.data.net.ApiResult
 import com.bykhavoy.ehat.data.net.FetchDiagnostics
@@ -14,6 +15,7 @@ import com.bykhavoy.ehat.domain.FactorEngine
 import com.bykhavoy.ehat.domain.StatusMapper
 import com.bykhavoy.ehat.domain.WindStatus
 import com.bykhavoy.ehat.domain.model.HourlyPoint
+import com.bykhavoy.ehat.domain.model.Location
 import com.bykhavoy.ehat.domain.model.LocationForecast
 import com.bykhavoy.ehat.domain.model.Thresholds
 import com.bykhavoy.ehat.ui.components.compassFrom
@@ -26,6 +28,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -38,6 +42,7 @@ import kotlin.math.roundToInt
 class MainViewModel(
     private val repository: ForecastRepository,
     private val settings: SettingsStore,
+    private val places: PlacesStore,
     private val clock: Clock,
     val diagnostics: StateFlow<FetchDiagnostics>,
 ) : ViewModel() {
@@ -48,9 +53,19 @@ class MainViewModel(
     private val _errors = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val errors: SharedFlow<String> = _errors.asSharedFlow()
 
-    // Default to Ивушка (the sea point).
-    private val selectedTab = MutableStateFlow(1)
+    val onboarded: StateFlow<Boolean> =
+        places.onboarded.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
+    private val selectedTab = MutableStateFlow(0)
     private val refreshing = MutableStateFlow(false)
+
+    private data class CoreInputs(
+        val state: ForecastState,
+        val step: Int,
+        val colNames: Set<String>,
+        val range: Pair<Long, Long>?,
+        val tab: Int,
+    )
 
     val uiState: StateFlow<UiState> =
         combine(
@@ -60,10 +75,12 @@ class MainViewModel(
                 settings.enabledColumns,
                 settings.range,
                 selectedTab,
-            ) { state, step, colNames, range, tab -> build(state, step, colNames, range, tab) },
+            ) { state, step, colNames, range, tab -> CoreInputs(state, step, colNames, range, tab) },
+            places.places,
             refreshing,
-        ) { s, r -> s.copy(refreshing = r) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UiState())
+        ) { core, pls, r ->
+            build(core.state, core.step, core.colNames, core.range, core.tab, pls).copy(refreshing = r)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UiState())
 
     init {
         viewModelScope.launch {
@@ -76,6 +93,10 @@ class MainViewModel(
                 delay(Constants.AUTO_REFRESH_MINUTES * 60_000)
                 doRefresh()
             }
+        }
+        // Re-fetch when the set of points changes.
+        viewModelScope.launch {
+            places.places.drop(1).distinctUntilChanged().collect { doRefresh() }
         }
     }
 
@@ -100,42 +121,58 @@ class MainViewModel(
         settings.applyFilters(step, columns.map { it.name }.toSet(), startMs, endMs)
     }
 
+    /** Save the configured points (from onboarding or the editor). */
+    fun savePlaces(list: List<Location>) = viewModelScope.launch { places.save(list) }
+
+    /** Save points and mark onboarding done. */
+    fun finishOnboarding(list: List<Location>) = viewModelScope.launch {
+        places.save(list)
+        places.setOnboarded()
+    }
+
     // --- mapping ---------------------------------------------------------------
 
     private val ru = Locale("ru")
     private val timeFmt = DateTimeFormatter.ofPattern("HH:mm")
     private val dayFmt = DateTimeFormatter.ofPattern("EEEE, d MMMM", ru)
     private val zone = FactorEngine.AQTAU
-    private val tabNames = Constants.LOCATIONS.map { it.name }
 
     private fun enabledOf(names: Set<String>): Set<Col> =
         names.mapNotNull { runCatching { Col.valueOf(it) }.getOrNull() }.toSet()
 
-    private fun build(state: ForecastState, step: Int, colNames: Set<String>, range: Pair<Long, Long>?, tab: Int): UiState {
+    private fun build(state: ForecastState, step: Int, colNames: Set<String>, range: Pair<Long, Long>?, tab: Int, pls: List<Location>): UiState {
         val enabled = enabledOf(colNames)
         val startMs = range?.first
         val endMs = range?.second
+        val tabNames = pls.map { it.name }
+        val placeUis = pls.map { PlaceUi(it.name, it.lat, it.lon) }
+        val idx = if (pls.isEmpty()) 0 else tab.coerceIn(0, pls.lastIndex)
         return when (state) {
             is ForecastState.Loading ->
-                UiState(UiState.Phase.LOADING, tabNames, tab, step, enabled, startMs, endMs)
+                UiState(UiState.Phase.LOADING, tabNames, idx, step, enabled, startMs, endMs, places = placeUis)
             is ForecastState.Empty ->
-                UiState(UiState.Phase.EMPTY, tabNames, tab, step, enabled, startMs, endMs, emptyLabel = state.errorLabel)
+                UiState(UiState.Phase.EMPTY, tabNames, idx, step, enabled, startMs, endMs, emptyLabel = state.errorLabel, places = placeUis)
             is ForecastState.Loaded -> {
                 val now = clock.now()
-                val loc = if (tab == 0) state.data.aktau else state.data.dacha
-                UiState(
-                    phase = UiState.Phase.CONTENT,
-                    tabs = tabNames,
-                    selectedTab = tab,
-                    stepHours = step,
-                    enabled = enabled,
-                    rangeStartMs = startMs,
-                    rangeEndMs = endMs,
-                    days = buildDays(loc, step, now, range),
-                    hasSeaTemp = loc.hourly.any { it.seaTempC != null },
-                    hasWave = loc.hourly.any { it.waveHeightM != null },
-                    freshness = freshnessOf(state.fetchedAt, now),
-                )
+                val loc = state.data.locations.getOrNull(idx) ?: state.data.locations.firstOrNull()
+                if (loc == null) {
+                    UiState(UiState.Phase.EMPTY, tabNames, idx, step, enabled, startMs, endMs, emptyLabel = "Нет мест", places = placeUis)
+                } else {
+                    UiState(
+                        phase = UiState.Phase.CONTENT,
+                        tabs = tabNames,
+                        selectedTab = idx,
+                        stepHours = step,
+                        enabled = enabled,
+                        rangeStartMs = startMs,
+                        rangeEndMs = endMs,
+                        days = buildDays(loc, step, now, range),
+                        hasSeaTemp = loc.hourly.any { it.seaTempC != null },
+                        hasWave = loc.hourly.any { it.waveHeightM != null },
+                        freshness = freshnessOf(state.fetchedAt, now),
+                        places = placeUis,
+                    )
+                }
             }
         }
     }
@@ -182,11 +219,12 @@ class MainViewModel(
     class Factory(
         private val repository: ForecastRepository,
         private val settings: SettingsStore,
+        private val places: PlacesStore,
         private val clock: Clock,
         private val diagnostics: StateFlow<FetchDiagnostics>,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            MainViewModel(repository, settings, clock, diagnostics) as T
+            MainViewModel(repository, settings, places, clock, diagnostics) as T
     }
 }

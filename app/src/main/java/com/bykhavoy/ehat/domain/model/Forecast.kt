@@ -8,12 +8,11 @@ data class LocationForecast(
 )
 
 /**
- * The full picture the UI renders: both points in a single object.
- * DUST (air-quality) and SEA (marine) come from separate endpoints and may be
- * absent; that absence is expressed as nulls inside the [HourlyPoint]s, not as
- * a missing forecast.
+ * The full picture the UI renders: one entry per configured point, in the order
+ * the user set them. DUST (air-quality) and SEA (marine) come from separate
+ * endpoints and may be absent; that absence is expressed as nulls inside the
+ * [HourlyPoint]s, not as a missing forecast.
  */
 data class Forecast(
-    val aktau: LocationForecast,
-    val dacha: LocationForecast,
+    val locations: List<LocationForecast>,
 )

@@ -35,8 +35,10 @@ import com.bykhavoy.ehat.ui.DayDetailScreen
 import com.bykhavoy.ehat.ui.DebugScreen
 import com.bykhavoy.ehat.ui.FiltersScreen
 import com.bykhavoy.ehat.ui.HomeScreen
+import com.bykhavoy.ehat.domain.model.Location
 import com.bykhavoy.ehat.ui.MainViewModel
 import com.bykhavoy.ehat.ui.MapScreen
+import com.bykhavoy.ehat.ui.PlacesScreen
 import com.bykhavoy.ehat.ui.WaterScreen
 import com.bykhavoy.ehat.ui.theme.Bg
 import com.bykhavoy.ehat.ui.theme.Calm
@@ -56,7 +58,7 @@ class MainActivity : ComponentActivity() {
         val graph = (application as EhatApp).graph
         val vm = ViewModelProvider(
             this,
-            MainViewModel.Factory(graph.repository, graph.settings, graph.clock, graph.diagnostics),
+            MainViewModel.Factory(graph.repository, graph.settings, graph.placesStore, graph.clock, graph.diagnostics),
         )[MainViewModel::class.java]
 
         splash.setKeepOnScreenCondition { !vm.cacheLoaded.value }
@@ -77,15 +79,27 @@ private fun AppRoot(vm: MainViewModel) {
     var dayIndex by remember { mutableStateOf<Int?>(null) }
     var showFilters by remember { mutableStateOf(false) }
     var showDebug by remember { mutableStateOf(false) }
+    var showPlaces by remember { mutableStateOf(false) }
     val ui by vm.uiState.collectAsStateWithLifecycle()
+    val onboarded by vm.onboarded.collectAsStateWithLifecycle()
     val context = LocalContext.current
     LaunchedEffect(Unit) { vm.errors.collect { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() } }
 
-    val canGoBack = showDebug || showFilters || dayIndex != null || dest != Dest.WEATHER
+    if (!onboarded) {
+        PlacesScreen(
+            initial = ui.places,
+            isOnboarding = true,
+            onDone = { list -> vm.finishOnboarding(list.map { Location(it.name, it.lat, it.lon) }) },
+        )
+        return
+    }
+
+    val canGoBack = showDebug || showFilters || showPlaces || dayIndex != null || dest != Dest.WEATHER
     BackHandler(enabled = canGoBack) {
         when {
             showDebug -> showDebug = false
             showFilters -> showFilters = false
+            showPlaces -> showPlaces = false
             dayIndex != null -> dayIndex = null
             else -> dest = Dest.WEATHER
         }
@@ -94,9 +108,10 @@ private fun AppRoot(vm: MainViewModel) {
     Row(Modifier.fillMaxSize().background(Bg)) {
         NavigationRail(containerColor = Card) {
             Spacer(Modifier.height(8.dp))
-            RailItem("📋", "Погода", dest == Dest.WEATHER && !showFilters) { dest = Dest.WEATHER; dayIndex = null; showFilters = false }
-            RailItem("🗺", "Карта", dest == Dest.MAP && !showFilters) { dest = Dest.MAP; showFilters = false }
-            RailItem("💧", "Вода", dest == Dest.WATER && !showFilters) { dest = Dest.WATER; showFilters = false }
+            RailItem("📋", "Погода", dest == Dest.WEATHER && !showFilters && !showPlaces) { dest = Dest.WEATHER; dayIndex = null; showFilters = false; showPlaces = false }
+            RailItem("🗺", "Карта", dest == Dest.MAP && !showFilters && !showPlaces) { dest = Dest.MAP; showFilters = false; showPlaces = false }
+            RailItem("💧", "Вода", dest == Dest.WATER && !showFilters && !showPlaces) { dest = Dest.WATER; showFilters = false; showPlaces = false }
+            RailItem("📍", "Места", showPlaces) { showPlaces = true }
             Spacer(Modifier.weight(1f))
             RailItem("⚙", "Фильтры", showFilters) { showFilters = true }
             Spacer(Modifier.height(8.dp))
@@ -108,6 +123,12 @@ private fun AppRoot(vm: MainViewModel) {
                     val d by vm.diagnostics.collectAsStateWithLifecycle()
                     DebugScreen(diagnostics = d, onRefresh = { vm.refresh() }, onBack = { showDebug = false })
                 }
+                showPlaces -> PlacesScreen(
+                    initial = ui.places,
+                    isOnboarding = false,
+                    onDone = { list -> vm.savePlaces(list.map { Location(it.name, it.lat, it.lon) }); showPlaces = false },
+                    onBack = { showPlaces = false },
+                )
                 showFilters -> FiltersScreen(
                     initialStep = ui.stepHours,
                     initialEnabled = ui.enabled,
@@ -119,8 +140,9 @@ private fun AppRoot(vm: MainViewModel) {
                     onClose = { showFilters = false },
                 )
                 dest == Dest.MAP -> {
-                    val loc = Constants.LOCATIONS.getOrElse(ui.selectedTab) { Constants.SEA }
-                    MapScreen(loc.lat, loc.lon, loc.name) { dest = Dest.WEATHER }
+                    val p = ui.places.getOrNull(ui.selectedTab) ?: ui.places.firstOrNull()
+                    if (p != null) MapScreen(p.lat, p.lon, p.name) { dest = Dest.WEATHER }
+                    else MapScreen(Constants.SEA.lat, Constants.SEA.lon, Constants.SEA.name) { dest = Dest.WEATHER }
                 }
                 dest == Dest.WATER -> WaterScreen(Constants.LADA_WATER_URL) { dest = Dest.WEATHER }
                 else -> {

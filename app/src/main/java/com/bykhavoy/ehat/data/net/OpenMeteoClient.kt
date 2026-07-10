@@ -26,8 +26,7 @@ import java.util.concurrent.TimeUnit
  * endpoint never blocks the forecast.
  */
 class OpenMeteoClient(
-    private val aktau: Location,
-    private val dacha: Location,
+    private val places: () -> List<Location>,
     private val clock: SystemClock,
     private val onDiagnostics: (FetchDiagnostics.() -> FetchDiagnostics) -> Unit = {},
     private val http: OkHttpClient = defaultHttp(),
@@ -37,10 +36,7 @@ class OpenMeteoClient(
     var lastRetryAfterSec: Long? = null
         private set
 
-    private val lat get() = "${aktau.lat},${dacha.lat}"
-    private val lon get() = "${aktau.lon},${dacha.lon}"
-
-    private fun forecastUrl() = "https://api.open-meteo.com/v1/forecast".toHttpUrl().newBuilder()
+    private fun forecastUrl(lat: String, lon: String) = "https://api.open-meteo.com/v1/forecast".toHttpUrl().newBuilder()
         .addQueryParameter("latitude", lat)
         .addQueryParameter("longitude", lon)
         .addQueryParameter(
@@ -55,7 +51,7 @@ class OpenMeteoClient(
         .addQueryParameter("forecast_days", "14")
         .build().toString()
 
-    private fun airUrl() = "https://air-quality-api.open-meteo.com/v1/air-quality".toHttpUrl().newBuilder()
+    private fun airUrl(lat: String, lon: String) = "https://air-quality-api.open-meteo.com/v1/air-quality".toHttpUrl().newBuilder()
         .addQueryParameter("latitude", lat)
         .addQueryParameter("longitude", lon)
         .addQueryParameter("hourly", "pm10,dust")
@@ -63,7 +59,7 @@ class OpenMeteoClient(
         .addQueryParameter("forecast_days", "7")
         .build().toString()
 
-    private fun marineUrl() = "https://marine-api.open-meteo.com/v1/marine".toHttpUrl().newBuilder()
+    private fun marineUrl(lat: String, lon: String) = "https://marine-api.open-meteo.com/v1/marine".toHttpUrl().newBuilder()
         .addQueryParameter("latitude", lat)
         .addQueryParameter("longitude", lon)
         .addQueryParameter("hourly", "wave_height,sea_surface_temperature")
@@ -72,12 +68,16 @@ class OpenMeteoClient(
         .build().toString()
 
     override suspend fun fetch(): ApiResult = withContext(Dispatchers.IO) {
+        val pl = places()
+        if (pl.isEmpty()) return@withContext ApiResult.Err(FetchError.Malformed("no places configured"))
+        val lat = pl.joinToString(",") { it.lat.toString() }
+        val lon = pl.joinToString(",") { it.lon.toString() }
         coroutineScope {
             // Optional endpoints run in parallel and never fail the whole fetch.
-            val airDef = async { (executeRaw(airUrl()) as? Raw.Ok)?.outcome?.body }
-            val marineDef = async { (executeRaw(marineUrl()) as? Raw.Ok)?.outcome?.body }
+            val airDef = async { (executeRaw(airUrl(lat, lon)) as? Raw.Ok)?.outcome?.body }
+            val marineDef = async { (executeRaw(marineUrl(lat, lon)) as? Raw.Ok)?.outcome?.body }
 
-            when (val fRaw = executeRaw(forecastUrl())) {
+            when (val fRaw = executeRaw(forecastUrl(lat, lon))) {
                 is Raw.Fail -> {
                     recordError(fRaw.error)
                     return@coroutineScope ApiResult.Err(fRaw.error, lastRetryAfterSec)
@@ -93,8 +93,8 @@ class OpenMeteoClient(
                         recordError(err, out)
                         return@coroutineScope ApiResult.Err(err)
                     }
-                    if (forecasts.size < 2 || (forecasts[0].hourly?.time?.size ?: 0) < 24) {
-                        val err = FetchError.Malformed("expected 2 points with >=24 hours")
+                    if (forecasts.size < pl.size || (forecasts.firstOrNull()?.hourly?.time?.size ?: 0) < 24) {
+                        val err = FetchError.Malformed("expected ${pl.size} points with >=24 hours")
                         recordError(err, out)
                         return@coroutineScope ApiResult.Err(err)
                     }
@@ -103,8 +103,9 @@ class OpenMeteoClient(
                     val marine = marineDef.await()?.let { runCatching { OpenMeteoParser.parseMarine(it) }.getOrNull() }
 
                     val forecast = Forecast(
-                        aktau = ForecastMapper.merge(aktau, forecasts[0], air?.getOrNull(0), marine?.getOrNull(0)),
-                        dacha = ForecastMapper.merge(dacha, forecasts[1], air?.getOrNull(1), marine?.getOrNull(1)),
+                        locations = pl.indices.map { i ->
+                            ForecastMapper.merge(pl[i], forecasts[i], air?.getOrNull(i), marine?.getOrNull(i))
+                        },
                     )
                     recordSuccess(out)
                     ApiResult.Ok(forecast, out.serverDate)

@@ -33,7 +33,7 @@ class ForecastRepositoryTest {
             HourlyPoint(t0.plusSeconds(3600L * it), true, 5.0, 7.0, 315.0, 30.0, 3.0, 0.0, 0, 20.0, null, null, 45.0, 28.0)
         }
         val lf = LocationForecast(loc, cur, hourly)
-        return Forecast(lf, lf)
+        return Forecast(listOf(lf, lf))
     }
 
     private class FakeApi(

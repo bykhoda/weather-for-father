@@ -36,6 +36,7 @@ data class UiState(
     val refreshing: Boolean = false,
     val freshness: Freshness? = null,
     val emptyLabel: String? = null,
+    val places: List<PlaceUi> = emptyList(),
 ) {
     enum class Phase { LOADING, CONTENT, EMPTY }
 
@@ -52,6 +53,8 @@ data class UiState(
     val visibleColumns: List<Col>
         get() = Col.entries.filter { (it.core || it in enabled) && available(it) }
 }
+
+data class PlaceUi(val name: String, val lat: Double, val lon: Double)
 
 data class DaySection(
     val title: String,

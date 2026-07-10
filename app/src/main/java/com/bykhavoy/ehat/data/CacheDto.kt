@@ -16,17 +16,15 @@ import java.time.Instant
 @Serializable
 data class CachedForecast(
     val fetchedAtEpochMs: Long,
-    val aktau: CachedLocation,
-    val dacha: CachedLocation,
+    val locations: List<CachedLocation> = emptyList(),
 ) {
     fun toDomain(): Pair<Forecast, Instant> =
-        Forecast(aktau.toDomain(), dacha.toDomain()) to Instant.ofEpochMilli(fetchedAtEpochMs)
+        Forecast(locations.map { it.toDomain() }) to Instant.ofEpochMilli(fetchedAtEpochMs)
 
     companion object {
         fun from(forecast: Forecast, fetchedAt: Instant) = CachedForecast(
             fetchedAtEpochMs = fetchedAt.toEpochMilli(),
-            aktau = CachedLocation.from(forecast.aktau),
-            dacha = CachedLocation.from(forecast.dacha),
+            locations = forecast.locations.map { CachedLocation.from(it) },
         )
     }
 }
