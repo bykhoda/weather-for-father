@@ -3,6 +3,7 @@ package com.bykhavoy.ehat.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,6 +39,28 @@ fun Segmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit) {
                     .background(if (active) Calm else Color.Transparent)
                     .clickable { onSelect(i) }
                     .padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
+    }
+}
+
+/** Location selector — rounded pill chips with a pin, weather-app style. */
+@Composable
+fun LocationTabs(options: List<String>, selected: Int, onSelect: (Int) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        options.forEachIndexed { i, label ->
+            val active = i == selected
+            Text(
+                "📍 $label",
+                color = if (active) Color.White else Ink,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(if (active) Calm else Color(0x0A000000))
+                    .then(if (active) Modifier else Modifier.border(1.dp, Color(0x14000000), RoundedCornerShape(20.dp)))
+                    .clickable { onSelect(i) }
+                    .padding(horizontal = 16.dp, vertical = 9.dp),
             )
         }
     }

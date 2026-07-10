@@ -1,6 +1,8 @@
 package com.bykhavoy.ehat.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +15,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -20,11 +26,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.abs
+import kotlin.math.roundToInt
 import com.bykhavoy.ehat.ui.HourRow
 import com.bykhavoy.ehat.ui.Metric
+import com.bykhavoy.ehat.ui.theme.Calm
 import com.bykhavoy.ehat.ui.theme.Ink
 import com.bykhavoy.ehat.ui.theme.InkDim
 
@@ -40,27 +50,60 @@ fun MetricChart(
     modifier: Modifier = Modifier,
 ) {
     val pts = rows.mapIndexedNotNull { i, r -> metric.value(r)?.let { i to it } }
+    val values = pts.map { it.second }
+    val minV = values.minOrNull()
+    val maxV = values.maxOrNull()
+    val nowIdx = rows.indexOfFirst { it.isNow }
+
+    // Scrub: drag a finger along the chart to read any hour. Null = resting on "now".
+    var scrubIdx by remember(rows) { mutableStateOf<Int?>(null) }
+    val activeIdx = scrubIdx ?: nowIdx.takeIf { it >= 0 }
+    val activeVal = activeIdx?.let { rows.getOrNull(it)?.let { r -> metric.value(r) } } ?: maxV
 
     Column(modifier) {
-        val current = pts.lastOrNull()?.second
         Row(verticalAlignment = Alignment.Bottom) {
             Text(metric.label, color = InkDim, fontSize = 15.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.width(12.dp))
             Text(
-                if (current != null) "${current.toInt()}${metric.unit}" else "—",
+                activeVal?.let { "${it.toInt()}${metric.unit}" } ?: "—",
                 color = metric.color,
                 fontSize = 30.sp,
                 fontWeight = FontWeight.Bold,
             )
+            if (scrubIdx != null) {
+                Spacer(Modifier.width(8.dp))
+                Text(rows.getOrNull(scrubIdx!!)?.time ?: "", color = InkDim, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            }
+        }
+        if (minV != null && maxV != null) {
+            Spacer(Modifier.height(2.dp))
+            Text("мин ${minV.toInt()}${metric.unit} · макс ${maxV.toInt()}${metric.unit}", color = InkDim, fontSize = 13.sp)
         }
         Spacer(Modifier.height(10.dp))
 
-        Box(Modifier.fillMaxWidth().height(150.dp)) {
-            if (pts.size < 2) {
+        Box(
+            Modifier.fillMaxWidth().height(150.dp).pointerInput(rows, pts) {
+                awaitEachGesture {
+                    fun idxAt(x: Float): Int? {
+                        if (pts.isEmpty()) return null
+                        if (rows.size <= 1 || size.width == 0) return pts.first().first
+                        val frac = (x / size.width).coerceIn(0f, 1f)
+                        val approxRow = (frac * (rows.size - 1)).roundToInt()
+                        return pts.minByOrNull { abs(it.first - approxRow) }?.first
+                    }
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    scrubIdx = idxAt(down.position.x)
+                    do {
+                        val e = awaitPointerEvent()
+                        e.changes.firstOrNull()?.let { ch -> scrubIdx = idxAt(ch.position.x); ch.consume() }
+                    } while (e.changes.any { it.pressed })
+                    scrubIdx = null
+                }
+            },
+        ) {
+            if (pts.size < 2 || minV == null || maxV == null) {
                 Text("нет данных", color = InkDim, fontSize = 14.sp, modifier = Modifier.align(Alignment.Center))
             } else {
-                val minV = pts.minOf { it.second }
-                val maxV = pts.maxOf { it.second }
                 val range = (maxV - minV).coerceAtLeast(1f)
                 val n = rows.size
 
@@ -99,13 +142,14 @@ fun MetricChart(
                     )
                     drawPath(line, metric.color, style = Stroke(width = 3.5f))
 
-                    // endpoint dot
-                    val lastV = pts.last().second
-                    drawCircle(metric.color, radius = 5f, center = Offset(lastX, py(lastV)))
+                    if (activeIdx != null && activeVal != null) {
+                        val ax = px(activeIdx)
+                        drawLine(Calm.copy(alpha = if (scrubIdx != null) 0.75f else 0.5f), Offset(ax, 0f), Offset(ax, h), strokeWidth = 2f)
+                        drawCircle(metric.color, radius = 5.5f, center = Offset(ax, py(activeVal)))
+                    } else {
+                        drawCircle(metric.color, radius = 5f, center = Offset(lastX, py(pts.last().second)))
+                    }
                 }
-
-                Text("${maxV.toInt()}", color = InkDim, fontSize = 12.sp, modifier = Modifier.align(Alignment.TopStart))
-                Text("${minV.toInt()}", color = InkDim, fontSize = 12.sp, modifier = Modifier.align(Alignment.BottomStart))
             }
         }
 

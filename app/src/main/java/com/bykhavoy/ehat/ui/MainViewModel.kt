@@ -7,6 +7,7 @@ import com.bykhavoy.ehat.data.Constants
 import com.bykhavoy.ehat.data.ForecastRepository
 import com.bykhavoy.ehat.data.ForecastState
 import com.bykhavoy.ehat.data.SettingsStore
+import com.bykhavoy.ehat.data.net.ApiResult
 import com.bykhavoy.ehat.data.net.FetchDiagnostics
 import com.bykhavoy.ehat.domain.Clock
 import com.bykhavoy.ehat.domain.FactorEngine
@@ -17,9 +18,12 @@ import com.bykhavoy.ehat.domain.model.LocationForecast
 import com.bykhavoy.ehat.domain.model.Thresholds
 import com.bykhavoy.ehat.ui.components.compassFrom
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
@@ -27,7 +31,6 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -41,6 +44,9 @@ class MainViewModel(
 
     private val _cacheLoaded = MutableStateFlow(false)
     val cacheLoaded: StateFlow<Boolean> = _cacheLoaded.asStateFlow()
+
+    private val _errors = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val errors: SharedFlow<String> = _errors.asSharedFlow()
 
     // Default to Ивушка (the sea point).
     private val selectedTab = MutableStateFlow(1)
@@ -75,7 +81,15 @@ class MainViewModel(
 
     private suspend fun doRefresh() {
         refreshing.value = true
-        try { repository.refresh() } finally { refreshing.value = false }
+        try {
+            val result = repository.refresh()
+            // Only alert when we already show cached data — a cold failure is the Empty screen.
+            if (result is ApiResult.Err && repository.state.value is ForecastState.Loaded) {
+                _errors.tryEmit("Не удалось обновить — показаны сохранённые данные")
+            }
+        } finally {
+            refreshing.value = false
+        }
     }
 
     fun refresh() = viewModelScope.launch { doRefresh() }
@@ -127,16 +141,19 @@ class MainViewModel(
     }
 
     private fun buildDays(loc: LocationForecast, step: Int, now: Instant, range: Pair<Long, Long>?): List<DaySection> {
-        val nowHour = now.truncatedTo(ChronoUnit.HOURS)
         val start = range?.first?.let { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }
         val end = range?.second?.let { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }
         val filtered = loc.hourly.filter { it.time.atZone(zone).hour % step == 0 }
+        // The "now" row is the current step-bucket (latest point at or before now),
+        // so it stays marked even at a 3-hour step where the exact hour is skipped.
+        val nowBucket = filtered.filter { !it.time.isAfter(now) }.maxByOrNull { it.time }?.time
         return filtered
             .groupBy { it.time.atZone(zone).toLocalDate() }
             .filter { (date, _) -> inRange(date, start, end) }
             .map { (date, points) ->
                 val title = dayFmt.format(date.atStartOfDay(zone)).replaceFirstChar { it.uppercase(ru) }
-                DaySection(title, points.map { row(it, nowHour) })
+                val rows = points.map { row(it, nowBucket) }
+                DaySection(title, rows, hasNow = rows.any { it.isNow }, nowTempC = rows.firstOrNull { it.isNow }?.tempC)
             }
     }
 
@@ -145,7 +162,7 @@ class MainViewModel(
         return !date.isBefore(start) && !date.isAfter(end)
     }
 
-    private fun row(h: HourlyPoint, nowHour: Instant): HourRow = HourRow(
+    private fun row(h: HourlyPoint, nowBucket: Instant?): HourRow = HourRow(
         time = h.time.atZone(zone).format(timeFmt),
         sky = WeatherFormat.skyGlyph(h.weatherCode, h.isDay),
         tempC = h.temperatureC?.roundToInt() ?: h.apparentTempC?.roundToInt(),
@@ -159,7 +176,7 @@ class MainViewModel(
         precipPct = h.precipProbPct?.roundToInt(),
         seaTempC = h.seaTempC?.roundToInt(),
         waveM = h.waveHeightM?.let { (it * 10).roundToInt() / 10.0 },
-        isNow = h.time.truncatedTo(ChronoUnit.HOURS) == nowHour,
+        isNow = nowBucket != null && h.time == nowBucket,
     )
 
     class Factory(

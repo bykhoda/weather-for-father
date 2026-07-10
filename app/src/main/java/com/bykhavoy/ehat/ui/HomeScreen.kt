@@ -1,5 +1,6 @@
 package com.bykhavoy.ehat.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -24,6 +25,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -31,7 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bykhavoy.ehat.domain.WindStatus
 import com.bykhavoy.ehat.ui.components.FreshnessStamp
-import com.bykhavoy.ehat.ui.components.Segmented
+import com.bykhavoy.ehat.ui.components.LocationTabs
 import com.bykhavoy.ehat.ui.theme.Bg
 import com.bykhavoy.ehat.ui.theme.Calm
 import com.bykhavoy.ehat.ui.theme.Harsh
@@ -51,6 +56,7 @@ fun HomeScreen(
     onRefresh: () -> Unit,
     onOpenDebug: () -> Unit,
 ) {
+    val nowRow = state.days.firstOrNull { it.hasNow }?.rows?.firstOrNull { it.isNow }
     Column(Modifier.fillMaxSize().background(Bg)) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
@@ -69,7 +75,7 @@ fun HomeScreen(
                 },
             )
             Spacer(Modifier.width(20.dp))
-            if (state.tabs.isNotEmpty()) Segmented(state.tabs, state.selectedTab, onSelectTab)
+            if (state.tabs.isNotEmpty()) LocationTabs(state.tabs, state.selectedTab, onSelectTab)
             Spacer(Modifier.weight(1f))
             state.freshness?.let { FreshnessStamp(it) }
             Spacer(Modifier.width(14.dp))
@@ -85,12 +91,21 @@ fun HomeScreen(
         }
 
         when (state.phase) {
-            UiState.Phase.LOADING -> Loader()
+            UiState.Phase.LOADING -> SkeletonList()
             UiState.Phase.EMPTY -> EmptyState(state.emptyLabel, onRefresh)
-            UiState.Phase.CONTENT -> LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
-                itemsIndexed(state.days) { i, day ->
-                    DayCard(day, state.hasSeaTemp) { onOpenDay(i) }
+            UiState.Phase.CONTENT -> Column(Modifier.fillMaxSize()) {
+                if (nowRow != null) {
+                    NowHeader(nowRow, state.showSea)
                     Box(Modifier.fillMaxWidth().height(1.dp).background(Hairline))
+                }
+                val allTemps = state.days.flatMap { d -> d.rows.mapNotNull { it.tempC } }
+                val weekMin = allTemps.minOrNull()
+                val weekMax = allTemps.maxOrNull()
+                LazyColumn(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                    itemsIndexed(state.days) { i, day ->
+                        DayCard(day, state.hasSeaTemp, weekMin, weekMax) { onOpenDay(i) }
+                        Box(Modifier.fillMaxWidth().height(1.dp).background(Hairline))
+                    }
                 }
             }
         }
@@ -98,7 +113,36 @@ fun HomeScreen(
 }
 
 @Composable
-private fun DayCard(day: DaySection, showSea: Boolean, onClick: () -> Unit) {
+private fun NowHeader(row: HourRow, showSea: Boolean) {
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(row.sky, fontSize = 44.sp)
+        Spacer(Modifier.width(16.dp))
+        Column {
+            Text(row.tempC?.let { "$it°C" } ?: "—", color = Ink, fontWeight = FontWeight.Bold, fontSize = 40.sp)
+            Text("сейчас", color = Calm, fontWeight = FontWeight.Medium, fontSize = 13.sp)
+        }
+        Spacer(Modifier.weight(1f))
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                "ветер ${row.windMs ?: "—"} м/с · порывы ${row.gustMs ?: "—"} м/с",
+                color = gustColor(row.windStatus), fontWeight = FontWeight.Medium, fontSize = 15.sp,
+            )
+            row.feelsC?.let { Text("ощущается $it°", color = InkDim, fontSize = 14.sp) }
+            if (showSea && row.seaTempC != null) {
+                Text("вода ${row.seaTempC}°", color = SeaBlue, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+            }
+            if ((row.precipPct ?: 0) >= 30) {
+                Text("💧 ${row.precipPct}%", color = InkDim, fontSize = 14.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DayCard(day: DaySection, showSea: Boolean, weekMin: Int?, weekMax: Int?, onClick: () -> Unit) {
     val rows = day.rows
     val temps = rows.mapNotNull { it.tempC }
     val tMax = temps.maxOrNull()
@@ -110,32 +154,76 @@ private fun DayCard(day: DaySection, showSea: Boolean, onClick: () -> Unit) {
     val precipMax = rows.mapNotNull { it.precipPct }.maxOrNull()
 
     Row(
-        Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 12.dp, vertical = 18.dp),
+        Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 12.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(day.title, color = Ink, fontWeight = FontWeight.SemiBold, fontSize = 18.sp, modifier = Modifier.weight(2.2f))
-        Text(mid?.sky ?: "·", fontSize = 24.sp, modifier = Modifier.weight(0.7f), textAlign = TextAlign.Center)
-        Text(
-            "${tMax?.let { "$it°" } ?: "—"}  ${tMin?.let { "$it°" } ?: ""}",
-            color = Ink, fontWeight = FontWeight.SemiBold, fontSize = 17.sp,
-            modifier = Modifier.weight(1.4f), textAlign = TextAlign.Center,
-        )
-        Text(
-            gustMax?.let { "порывы $it" } ?: "—",
-            color = worst?.let { gustColor(it.windStatus) } ?: InkDim,
-            fontWeight = FontWeight.Medium, fontSize = 15.sp,
-            modifier = Modifier.weight(1.5f), textAlign = TextAlign.Center,
-        )
-        if (precipMax != null && precipMax >= 30) {
-            Text("💧$precipMax%", color = InkDim, fontSize = 14.sp, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-        } else {
-            Spacer(Modifier.weight(1f))
+        Column(Modifier.weight(1f)) {
+            Text(day.title, color = if (day.hasNow) Calm else Ink, fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
+            if (day.hasNow) {
+                Text("сейчас${day.nowTempC?.let { " $it°C" } ?: ""}", color = Calm, fontWeight = FontWeight.Medium, fontSize = 13.sp)
+            } else if (gustMax != null) {
+                Text("порывы $gustMax м/с", color = worst?.let { gustColor(it.windStatus) } ?: InkDim, fontWeight = FontWeight.Medium, fontSize = 13.sp)
+            }
         }
+        Text(mid?.sky ?: "·", fontSize = 24.sp, modifier = Modifier.width(40.dp), textAlign = TextAlign.Center)
+        Box(Modifier.width(46.dp), contentAlignment = Alignment.Center) {
+            if (precipMax != null && precipMax >= 30) Text("💧$precipMax%", color = SeaBlue, fontSize = 13.sp)
+        }
+        Text(tMin?.let { "$it°" } ?: "—", color = InkDim, fontSize = 15.sp, modifier = Modifier.width(30.dp), textAlign = TextAlign.End)
+        Spacer(Modifier.width(8.dp))
+        TempRangeBar(tMin, tMax, weekMin, weekMax, Modifier.width(60.dp).height(6.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(tMax?.let { "$it°" } ?: "—", color = Ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, modifier = Modifier.width(30.dp))
         if (showSea) {
-            Text(sea?.let { "$it°" } ?: "—", color = SeaBlue, fontWeight = FontWeight.SemiBold, fontSize = 16.sp,
-                modifier = Modifier.weight(0.9f), textAlign = TextAlign.Center)
+            Spacer(Modifier.width(8.dp))
+            Text(sea?.let { "$it°" } ?: "—", color = SeaBlue, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.width(38.dp), textAlign = TextAlign.Center)
         }
-        Text("›", color = InkDim, fontSize = 22.sp, modifier = Modifier.width(24.dp), textAlign = TextAlign.End)
+        Text("›", color = InkDim, fontSize = 22.sp, modifier = Modifier.width(18.dp), textAlign = TextAlign.End)
+    }
+}
+
+@Composable
+private fun TempRangeBar(tMin: Int?, tMax: Int?, weekMin: Int?, weekMax: Int?, modifier: Modifier) {
+    if (tMin == null || tMax == null || weekMin == null || weekMax == null) {
+        Box(modifier)
+        return
+    }
+    val span = (weekMax - weekMin).coerceAtLeast(1)
+    Canvas(modifier) {
+        val w = size.width
+        val h = size.height
+        val r = h / 2f
+        drawRoundRect(Hairline, size = Size(w, h), cornerRadius = CornerRadius(r, r))
+        val x0 = ((tMin - weekMin).toFloat() / span * w).coerceIn(0f, w)
+        val x1 = ((tMax - weekMin).toFloat() / span * w).coerceIn(0f, w)
+        val segW = (x1 - x0).coerceAtLeast(h)
+        val left = x0.coerceAtMost(w - segW).coerceAtLeast(0f)
+        drawRoundRect(
+            brush = Brush.horizontalGradient(
+                listOf(androidx.compose.ui.graphics.Color(0xFF4E93C9), androidx.compose.ui.graphics.Color(0xFFE0864B)),
+            ),
+            topLeft = Offset(left, 0f),
+            size = Size(segW, h),
+            cornerRadius = CornerRadius(r, r),
+        )
+    }
+}
+
+@Composable
+private fun SkeletonList() {
+    val bar = androidx.compose.ui.graphics.Color(0x11000000)
+    Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(26.dp)) {
+        repeat(8) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.width(130.dp).height(16.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).background(bar))
+                Spacer(Modifier.weight(1f))
+                Box(Modifier.width(52.dp).height(14.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).background(bar))
+                Spacer(Modifier.width(16.dp))
+                Box(Modifier.width(70.dp).height(14.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).background(bar))
+                Spacer(Modifier.width(16.dp))
+                Box(Modifier.width(40.dp).height(14.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).background(bar))
+            }
+        }
     }
 }
 

@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.runtime.Composable
@@ -60,9 +61,21 @@ fun FiltersScreen(
     val defaultStart = remember { LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli() }
     val defaultEnd = remember { LocalDate.now().plusDays(13).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli() }
 
+    // Forecast horizon is 14 days — grey out everything else so you can't land on empty dates.
+    val selectable = remember(defaultStart, defaultEnd) {
+        object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean = utcTimeMillis in defaultStart..defaultEnd
+            override fun isSelectableYear(year: Int): Boolean {
+                val today = LocalDate.now()
+                return year in today.year..today.plusDays(13).year
+            }
+        }
+    }
+
     val rangeState = rememberDateRangePickerState(
         initialSelectedStartDateMillis = initialStartMs ?: defaultStart,
         initialSelectedEndDateMillis = initialEndMs ?: defaultEnd,
+        selectableDates = selectable,
     )
     var step by remember { mutableIntStateOf(initialStep) }
     var enabled by remember { mutableStateOf(initialEnabled) }

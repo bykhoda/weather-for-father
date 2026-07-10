@@ -9,15 +9,15 @@ import com.bykhavoy.ehat.domain.WindStatus
 enum class Col(val header: String, val widthDp: Int, val core: Boolean, val chip: String) {
     TIME("Время", 84, true, "время"),   // only column always shown (the axis)
     SKY("небо", 52, false, "небо"),
-    TEMP("t°", 62, false, "температура"),
-    WIND("ветер", 66, false, "ветер"),
-    FEELS("ощущ", 70, false, "ощущается"),
-    HUMIDITY("влаж", 66, false, "влажность"),
-    GUST("порывы", 78, false, "порывы"),
+    TEMP("t, °C", 72, false, "температура"),
+    WIND("ветер, м/с", 92, false, "ветер"),
+    FEELS("ощущ, °C", 84, false, "ощущается"),
+    HUMIDITY("влаж, %", 74, false, "влажность"),
+    GUST("порывы, м/с", 104, false, "порывы"),
     DIR("напр", 96, false, "направление"),
-    PRECIP("осадки", 76, false, "осадки"),
-    SEA_TEMP("вода", 64, false, "вода"),
-    WAVE("волна", 66, false, "волна");
+    PRECIP("осадки, %", 92, false, "осадки"),
+    SEA_TEMP("вода, °C", 80, false, "вода"),
+    WAVE("волна, м", 80, false, "волна");
 
     val sea: Boolean get() = this == SEA_TEMP || this == WAVE
 }
@@ -53,7 +53,12 @@ data class UiState(
         get() = Col.entries.filter { (it.core || it in enabled) && available(it) }
 }
 
-data class DaySection(val title: String, val rows: List<HourRow>)
+data class DaySection(
+    val title: String,
+    val rows: List<HourRow>,
+    val hasNow: Boolean = false,
+    val nowTempC: Int? = null,
+)
 
 data class HourRow(
     val time: String,
