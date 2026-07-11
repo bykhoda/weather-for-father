@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -20,9 +21,14 @@ class SettingsStore(private val store: DataStore<Preferences>) {
     private val colsKey = stringSetPreferencesKey("enabled_columns")
     private val startKey = longPreferencesKey("range_start_ms")
     private val endKey = longPreferencesKey("range_end_ms")
+    private val owmKeyKey = stringPreferencesKey("owm_key")
 
     val stepHours: Flow<Int> = store.data.map { it[stepKey] ?: DEFAULT_STEP }
     val enabledColumns: Flow<Set<String>> = store.data.map { it[colsKey] ?: DEFAULT_COLUMNS }
+
+    /** Ключ OpenWeatherMap для слоёв на карте (ветер/осадки/облачность/температура). */
+    val owmKey: Flow<String> = store.data.map { it[owmKeyKey] ?: "" }
+    suspend fun setOwmKey(key: String) = store.edit { it[owmKeyKey] = key.trim() }
 
     /** Selected date range in epoch millis, or null for the full fetched horizon. */
     val range: Flow<Pair<Long, Long>?> = store.data.map { p ->

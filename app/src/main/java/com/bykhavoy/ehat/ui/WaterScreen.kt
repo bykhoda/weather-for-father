@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bykhavoy.ehat.ui.components.WebPane
 import com.bykhavoy.ehat.ui.theme.Bg
+import com.bykhavoy.ehat.ui.components.BackButton
 import com.bykhavoy.ehat.ui.theme.Calm
 import com.bykhavoy.ehat.ui.theme.Ink
 import com.bykhavoy.ehat.ui.theme.InkDim
@@ -32,7 +33,7 @@ fun WaterScreen(url: String, onBack: () -> Unit) {
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("‹", color = Calm, fontSize = 30.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { onBack() })
+            BackButton(onBack)
             Spacer(Modifier.width(14.dp))
             Column {
                 Text("Температура воды", color = Ink, fontWeight = FontWeight.Bold, fontSize = 20.sp)

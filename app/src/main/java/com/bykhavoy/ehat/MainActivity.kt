@@ -23,6 +23,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
+import com.bykhavoy.ehat.R
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -82,6 +86,7 @@ private fun AppRoot(vm: MainViewModel) {
     var showPlaces by remember { mutableStateOf(false) }
     val ui by vm.uiState.collectAsStateWithLifecycle()
     val onboarded by vm.onboarded.collectAsStateWithLifecycle()
+    val owmKey by vm.owmKey.collectAsStateWithLifecycle()
     val context = LocalContext.current
     LaunchedEffect(Unit) { vm.errors.collect { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() } }
 
@@ -108,12 +113,11 @@ private fun AppRoot(vm: MainViewModel) {
     Row(Modifier.fillMaxSize().background(Bg)) {
         NavigationRail(containerColor = Card) {
             Spacer(Modifier.height(8.dp))
-            RailItem("📋", "Погода", dest == Dest.WEATHER && !showFilters && !showPlaces) { dest = Dest.WEATHER; dayIndex = null; showFilters = false; showPlaces = false }
-            RailItem("🗺", "Карта", dest == Dest.MAP && !showFilters && !showPlaces) { dest = Dest.MAP; showFilters = false; showPlaces = false }
-            RailItem("💧", "Вода", dest == Dest.WATER && !showFilters && !showPlaces) { dest = Dest.WATER; showFilters = false; showPlaces = false }
-            RailItem("📍", "Места", showPlaces) { showPlaces = true }
+            RailItem(R.drawable.ic_weather, "Погода", dest == Dest.WEATHER && !showFilters && !showPlaces) { dest = Dest.WEATHER; dayIndex = null; showFilters = false; showPlaces = false }
+            RailItem(R.drawable.ic_map, "Карта", dest == Dest.MAP && !showFilters && !showPlaces) { dest = Dest.MAP; showFilters = false; showPlaces = false }
+            RailItem(R.drawable.ic_water, "Вода", dest == Dest.WATER && !showFilters && !showPlaces) { dest = Dest.WATER; showFilters = false; showPlaces = false }
             Spacer(Modifier.weight(1f))
-            RailItem("⚙", "Фильтры", showFilters) { showFilters = true }
+            RailItem(R.drawable.ic_settings, "Фильтры", showFilters || showPlaces) { showFilters = true }
             Spacer(Modifier.height(8.dp))
         }
 
@@ -137,12 +141,15 @@ private fun AppRoot(vm: MainViewModel) {
                     hasSeaTemp = ui.hasSeaTemp,
                     hasWave = ui.hasWave,
                     onApply = { step, cols, s, e -> vm.applyFilters(step, cols, s, e) },
+                    onEditPlaces = { showPlaces = true },
                     onClose = { showFilters = false },
+                    initialOwmKey = owmKey,
+                    onSaveOwmKey = { vm.setOwmKey(it) },
                 )
                 dest == Dest.MAP -> {
                     val p = ui.places.getOrNull(ui.selectedTab) ?: ui.places.firstOrNull()
-                    if (p != null) MapScreen(p.lat, p.lon, p.name) { dest = Dest.WEATHER }
-                    else MapScreen(Constants.SEA.lat, Constants.SEA.lon, Constants.SEA.name) { dest = Dest.WEATHER }
+                    if (p != null) MapScreen(p.lat, p.lon, p.name, owmKey) { dest = Dest.WEATHER }
+                    else MapScreen(Constants.SEA.lat, Constants.SEA.lon, Constants.SEA.name, owmKey) { dest = Dest.WEATHER }
                 }
                 dest == Dest.WATER -> WaterScreen(Constants.LADA_WATER_URL) { dest = Dest.WEATHER }
                 else -> {
@@ -174,11 +181,11 @@ private fun AppRoot(vm: MainViewModel) {
 }
 
 @Composable
-private fun RailItem(icon: String, label: String, selected: Boolean, onClick: () -> Unit) {
+private fun RailItem(icon: Int, label: String, selected: Boolean, onClick: () -> Unit) {
     NavigationRailItem(
         selected = selected,
         onClick = onClick,
-        icon = { Text(icon, fontSize = 22.sp) },
+        icon = { Icon(painterResource(icon), contentDescription = label, modifier = Modifier.size(22.dp)) },
         label = { Text(label, fontSize = 12.sp) },
         colors = NavigationRailItemDefaults.colors(
             selectedIconColor = Calm,

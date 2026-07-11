@@ -2,6 +2,9 @@ package com.bykhavoy.ehat.ui.components
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
+import android.webkit.CookieManager
+import android.webkit.WebChromeClient
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Box
@@ -28,11 +31,24 @@ fun WebPane(url: String, modifier: Modifier = Modifier) {
             factory = { ctx ->
                 @SuppressLint("SetJavaScriptEnabled")
                 WebView(ctx).apply {
+                    runCatching { WebView.setWebContentsDebuggingEnabled(true) }
                     setBackgroundColor(android.graphics.Color.WHITE)
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
+                    settings.databaseEnabled = true
                     settings.loadWithOverviewMode = true
                     settings.useWideViewPort = true
+                    settings.mediaPlaybackRequiresUserGesture = false
+                    settings.cacheMode = WebSettings.LOAD_DEFAULT
+                    settings.allowFileAccess = true
+                    settings.allowContentAccess = true
+                    settings.javaScriptCanOpenWindowsAutomatically = true
+                    settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                    runCatching {
+                        CookieManager.getInstance().setAcceptCookie(true)
+                        CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                    }
+                    webChromeClient = WebChromeClient()
                     webViewClient = object : WebViewClient() {
                         override fun onPageStarted(v: WebView?, u: String?, f: Bitmap?) { loading = true }
                         override fun onPageFinished(v: WebView?, u: String?) { loading = false }
@@ -56,9 +72,21 @@ fun WebPaneHtml(html: String, modifier: Modifier = Modifier) {
             factory = { ctx ->
                 @SuppressLint("SetJavaScriptEnabled")
                 WebView(ctx).apply {
+                    runCatching { WebView.setWebContentsDebuggingEnabled(true) }
                     setBackgroundColor(android.graphics.Color.WHITE)
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
+                    settings.databaseEnabled = true
+                    settings.loadWithOverviewMode = true
+                    settings.useWideViewPort = true
+                    settings.mediaPlaybackRequiresUserGesture = false
+                    settings.javaScriptCanOpenWindowsAutomatically = true
+                    settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                    runCatching {
+                        CookieManager.getInstance().setAcceptCookie(true)
+                        CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                    }
+                    webChromeClient = WebChromeClient()
                     webViewClient = object : WebViewClient() {
                         override fun onPageStarted(v: WebView?, u: String?, f: Bitmap?) { loading = true }
                         override fun onPageFinished(v: WebView?, u: String?) { loading = false }

@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDateRangePickerState
@@ -36,7 +37,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.bykhavoy.ehat.R
 import com.bykhavoy.ehat.ui.components.Chip
+import com.bykhavoy.ehat.ui.components.GhostButton
+import com.bykhavoy.ehat.ui.components.IconAction
+import com.bykhavoy.ehat.ui.components.PrimaryButton
 import com.bykhavoy.ehat.ui.components.Segmented
 import com.bykhavoy.ehat.ui.theme.Bg
 import com.bykhavoy.ehat.ui.theme.Calm
@@ -56,8 +61,12 @@ fun FiltersScreen(
     hasSeaTemp: Boolean,
     hasWave: Boolean,
     onApply: (step: Int, columns: Set<Col>, startMs: Long?, endMs: Long?) -> Unit,
+    onEditPlaces: () -> Unit,
     onClose: () -> Unit,
+    initialOwmKey: String = "",
+    onSaveOwmKey: (String) -> Unit = {},
 ) {
+    var owmKey by remember { mutableStateOf(initialOwmKey) }
     val defaultStart = remember { LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli() }
     val defaultEnd = remember { LocalDate.now().plusDays(13).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli() }
 
@@ -92,7 +101,7 @@ fun FiltersScreen(
         ) {
             Text("Фильтры", color = Ink, fontWeight = FontWeight.Bold, fontSize = 24.sp)
             Spacer(Modifier.weight(1f))
-            Text("✕", color = InkDim, fontSize = 24.sp, modifier = Modifier.clickable { onClose() }.padding(4.dp))
+            IconAction(R.drawable.ic_close, onClick = onClose, tint = InkDim, size = 22.dp)
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(Stroke))
 
@@ -112,6 +121,19 @@ fun FiltersScreen(
             Column(
                 Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(20.dp),
             ) {
+                Text("Места", color = InkDim, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "📍 Изменить места",
+                    color = Calm, fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Calm.copy(alpha = 0.12f))
+                        .clickable { onEditPlaces() }
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                )
+
+                Spacer(Modifier.height(24.dp))
                 Text("Шаг", color = InkDim, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(8.dp))
                 Segmented(listOf("Каждый час", "Каждые 3 часа"), if (step == 1) 0 else 1) { step = if (it == 0) 1 else 3 }
@@ -126,6 +148,20 @@ fun FiltersScreen(
                         }
                     }
                 }
+
+                Spacer(Modifier.height(24.dp))
+                Text("Слои погоды на карте", color = InkDim, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    owmKey, { owmKey = it }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Ключ OpenWeatherMap") },
+                    placeholder = { Text("вставьте ключ сюда") },
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Для слоёв погоды. Бесплатно на openweathermap.org · «Радар» работает без ключа.",
+                    color = InkDim, fontSize = 12.sp,
+                )
             }
         }
 
@@ -136,38 +172,19 @@ fun FiltersScreen(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                "Сбросить",
-                color = Ink,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Color(0x0F000000))
-                    .clickable {
-                        step = 3
-                        enabled = DEFAULT_ENABLED
-                        rangeState.setSelection(defaultStart, defaultEnd)
-                    }
-                    .padding(horizontal = 26.dp, vertical = 14.dp),
-            )
+            GhostButton("Сбросить") {
+                step = 3
+                enabled = DEFAULT_ENABLED
+                rangeState.setSelection(defaultStart, defaultEnd)
+            }
             Spacer(Modifier.weight(1f))
-            Text(
-                "Применить",
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Calm)
-                    .clickable {
-                        val s = rangeState.selectedStartDateMillis
-                        val e = rangeState.selectedEndDateMillis
-                        onApply(step, enabled, s, e)
-                        onClose()
-                    }
-                    .padding(horizontal = 32.dp, vertical = 14.dp),
-            )
+            PrimaryButton("Применить") {
+                val s = rangeState.selectedStartDateMillis
+                val e = rangeState.selectedEndDateMillis
+                onSaveOwmKey(owmKey)
+                onApply(step, enabled, s, e)
+                onClose()
+            }
         }
     }
 }

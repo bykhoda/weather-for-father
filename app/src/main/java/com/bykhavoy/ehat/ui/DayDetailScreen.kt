@@ -30,6 +30,7 @@ import com.bykhavoy.ehat.ui.components.Chip
 import com.bykhavoy.ehat.ui.components.ForecastTable
 import com.bykhavoy.ehat.ui.components.MetricChart
 import com.bykhavoy.ehat.ui.theme.Bg
+import com.bykhavoy.ehat.ui.components.BackButton
 import com.bykhavoy.ehat.ui.theme.Calm
 import com.bykhavoy.ehat.ui.theme.Ink
 import com.bykhavoy.ehat.ui.theme.InkDim
@@ -60,7 +61,7 @@ fun DayDetailScreen(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("‹", color = Calm, fontSize = 30.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { onBack() })
+            BackButton(onBack)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(day.title, color = Ink, fontWeight = FontWeight.Bold, fontSize = 20.sp)

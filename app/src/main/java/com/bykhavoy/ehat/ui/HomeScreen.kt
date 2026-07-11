@@ -37,6 +37,8 @@ import androidx.compose.ui.unit.sp
 import com.bykhavoy.ehat.domain.WindStatus
 import com.bykhavoy.ehat.ui.components.FreshnessStamp
 import com.bykhavoy.ehat.ui.components.LocationTabs
+import com.bykhavoy.ehat.R
+import com.bykhavoy.ehat.ui.components.IconAction
 import com.bykhavoy.ehat.ui.theme.Bg
 import com.bykhavoy.ehat.ui.theme.Calm
 import com.bykhavoy.ehat.ui.theme.Harsh
@@ -79,7 +81,7 @@ fun HomeScreen(
             Spacer(Modifier.weight(1f))
             state.freshness?.let { FreshnessStamp(it) }
             Spacer(Modifier.width(14.dp))
-            Text("⟳", color = Calm, fontSize = 22.sp, modifier = Modifier.clickable { onRefresh() }.padding(4.dp))
+            IconAction(R.drawable.ic_refresh, onClick = onRefresh, tint = Calm, size = 22.dp)
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(Hairline))
         if (state.refreshing && state.phase == UiState.Phase.CONTENT) {

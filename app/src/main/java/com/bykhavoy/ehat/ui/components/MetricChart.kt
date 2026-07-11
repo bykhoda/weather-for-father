@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
@@ -144,8 +145,15 @@ fun MetricChart(
 
                     if (activeIdx != null && activeVal != null) {
                         val ax = px(activeIdx)
-                        drawLine(Calm.copy(alpha = if (scrubIdx != null) 0.75f else 0.5f), Offset(ax, 0f), Offset(ax, h), strokeWidth = 2f)
-                        drawCircle(metric.color, radius = 5.5f, center = Offset(ax, py(activeVal)))
+                        val my = py(activeVal)
+                        drawLine(
+                            metric.color.copy(alpha = if (scrubIdx != null) 0.5f else 0.28f),
+                            Offset(ax, 0f), Offset(ax, h),
+                            strokeWidth = 1.5f,
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 7f)),
+                        )
+                        drawCircle(Color.White, radius = 7.5f, center = Offset(ax, my))
+                        drawCircle(metric.color, radius = 5f, center = Offset(ax, my))
                     } else {
                         drawCircle(metric.color, radius = 5f, center = Offset(lastX, py(pts.last().second)))
                     }

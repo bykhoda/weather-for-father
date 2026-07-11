@@ -121,6 +121,10 @@ class MainViewModel(
         settings.applyFilters(step, columns.map { it.name }.toSet(), startMs, endMs)
     }
 
+    /** Ключ OpenWeatherMap для слоёв карты. */
+    val owmKey: StateFlow<String> = settings.owmKey.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+    fun setOwmKey(key: String) = viewModelScope.launch { settings.setOwmKey(key) }
+
     /** Save the configured points (from onboarding or the editor). */
     fun savePlaces(list: List<Location>) = viewModelScope.launch { places.save(list) }
 

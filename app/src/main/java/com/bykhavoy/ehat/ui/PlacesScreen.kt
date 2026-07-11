@@ -31,6 +31,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bykhavoy.ehat.ui.theme.Bg
+import com.bykhavoy.ehat.ui.components.BackButton
 import com.bykhavoy.ehat.ui.theme.Calm
 import com.bykhavoy.ehat.ui.theme.Ink
 import com.bykhavoy.ehat.ui.theme.InkDim
@@ -68,7 +69,7 @@ fun PlacesScreen(
     Column(Modifier.fillMaxSize().background(Bg).verticalScroll(rememberScrollState()).padding(20.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (onBack != null) {
-                Text("‹", color = Calm, fontSize = 30.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { onBack() })
+                BackButton(onBack)
                 Spacer(Modifier.width(12.dp))
             }
             Text(if (isOnboarding) "Ваши места" else "Мои места", color = Ink, fontWeight = FontWeight.Bold, fontSize = 24.sp)
